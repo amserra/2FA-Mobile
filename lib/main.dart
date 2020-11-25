@@ -1,7 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:qrscan/qrscan.dart' as scanner;
+import 'package:pbkdf2_dart/pbkdf2_dart.dart';
+import 'package:crypto/crypto.dart';
+import 'package:otp/otp.dart';
 
 Timer timer;
 
@@ -14,7 +18,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: '2FA Autheticator',
       theme: ThemeData(
         // This is the theme of your application.
         //
@@ -31,7 +35,7 @@ class MyApp extends StatelessWidget {
         // closer together (more dense) than on mobile platforms.
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: MyHomePage(title: 'Flutter Demo Home Page'),
+      home: MyHomePage(title: '2FA Autheticator Home Page'),
     );
   }
 }
@@ -55,7 +59,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 3;
+  int _counter = 0;
   String _cameraScanResult = "no result";
 
   @override
@@ -78,7 +82,18 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void _readQRcode() {
     setState(() async {
-      _cameraScanResult = await scanner.scan();
+      String qrCodeScan = await scanner.scan();
+
+      // Create PBKDF2 instance using the SHA256 hash. The default is to use SHA1
+      var gen = new PBKDF2(hash: sha256.newInstance());
+
+      // Generate a 32 byte key using the given password and salt, with 1000 iterations
+      var key = gen.generateKey(qrCodeScan, "salt", 1000, 32);
+
+      var converter = new Base64Encoder();
+      _cameraScanResult = converter.convert(key);
+
+      //TODO - Save key to memory
     });
   }
 
