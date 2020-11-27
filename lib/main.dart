@@ -7,7 +7,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:qrscan/qrscan.dart' as scanner;
 import 'package:pbkdf2_dart/pbkdf2_dart.dart';
 import 'package:crypto/crypto.dart';
+import 'package:base32/base32.dart';
 import 'package:otp/otp.dart';
+import 'package:convert/convert.dart';
 
 Timer timer;
 
@@ -39,34 +41,41 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-  String _cameraScanResult = "no result";
+  String _counter;
+  String _cameraScanResult;
 
   @override
   void initState() {
     super.initState();
     timer =
-        Timer.periodic(Duration(seconds: 5), (Timer t) => _incrementCounter());
+        Timer.periodic(Duration(seconds: 30), (Timer t) => _incrementCounter());
   }
 
   void _incrementCounter() {
     setState(() {
-      _counter = _counter + 2;
+      if (_cameraScanResult != null) {
+        // Create PBKDF2 instance using the SHA256 hash. The default is to use SHA1
+        var gen = new PBKDF2(hash: sha256.newInstance());
+
+        // Generate a 32 byte key using the given password and salt, with 1000 iterations
+        var key = gen.generateKey(_cameraScanResult, "salt", 1000, 32);
+
+        //List<int> to HexString
+        var result = hex.encode(key);
+
+        //Encode hexstring to base32
+        var kdf = base32.encodeHexString(result);
+
+        //Apply TOTP algorithm
+        _counter = OTP.generateTOTPCodeString(
+            kdf, DateTime.now().millisecondsSinceEpoch);
+      }
     });
   }
 
   void _readQRcode() {
     setState(() async {
-      String qrCodeScan = await scanner.scan();
-
-      // Create PBKDF2 instance using the SHA256 hash. The default is to use SHA1
-      var gen = new PBKDF2(hash: sha256.newInstance());
-
-      // Generate a 32 byte key using the given password and salt, with 1000 iterations
-      var key = gen.generateKey(qrCodeScan, "salt", 1000, 32);
-
-      var converter = new Base64Encoder();
-      _cameraScanResult = converter.convert(key);
+      _cameraScanResult = await scanner.scan();
 
       //TODO - Save key to memory
     });
@@ -90,22 +99,13 @@ class _MyHomePageState extends State<MyHomePage> {
             heightFactor: 0.85,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                Text(
-                  'You code is:',
-                  style: TextStyle(color: Colors.white, fontSize: 25),
-                ),
-                SizedBox(height: 50),
-                Text(
-                  '$_counter',
-                  // style: Theme.of(context).textTheme.headline4,
-                  style: TextStyle(color: Colors.white, fontSize: 60),
-                ),
-                // Text(
-                //   '$_cameraScanResult',
-                //   style: TextStyle(color: Colors.white, fontSize: 30),
-                // ),
-              ],
+              children: getCodeText()
+
+              // Text(
+              //   '$_cameraScanResult',
+              //   style: TextStyle(color: Colors.white, fontSize: 30),
+              // ),
+              ,
             ),
           ),
           Positioned(
@@ -144,5 +144,31 @@ class _MyHomePageState extends State<MyHomePage> {
         backgroundColor: Color.fromRGBO(154, 205, 50, 0.8),
       ),
     );
+  }
+
+  List<Widget> getCodeText() {
+    List<Widget> widgetArray = List<Widget>();
+
+    if (_cameraScanResult == null) {
+      widgetArray.add(Text(
+        'You don\'t have a code',
+        style: TextStyle(color: Colors.white, fontSize: 25),
+      ));
+    } else {
+      widgetArray.add(
+        Text(
+          'Your code is:',
+          style: TextStyle(color: Colors.white, fontSize: 25),
+        ),
+      );
+      widgetArray.add(SizedBox(height: 50));
+      widgetArray.add(Text(
+        '$_counter',
+        // style: Theme.of(context).textTheme.headline4,
+        style: TextStyle(color: Colors.white, fontSize: 60),
+      ));
+    }
+
+    return widgetArray;
   }
 }
