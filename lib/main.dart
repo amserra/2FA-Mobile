@@ -54,23 +54,65 @@ class _MyHomePageState extends State<MyHomePage> {
   void _incrementCounter() {
     setState(() {
       if (_cameraScanResult != null) {
+
         // Create PBKDF2 instance using the SHA256 hash. The default is to use SHA1
         var gen = new PBKDF2(hash: sha256.newInstance());
 
+        // Get secret param from qrcode uri
+        var uri = Uri.parse(_cameraScanResult);
+        var secret = uri.queryParameters['secret'];
+
+
         // Generate a 32 byte key using the given password and salt, with 1000 iterations
-        var key = gen.generateKey(_cameraScanResult, "salt", 1000, 32);
+        var kdf = gen.generateKey(secret, "salt", 1000, 32);
 
         //List<int> to HexString
-        var result = hex.encode(key);
-
-        //Encode hexstring to base32
-        var kdf = base32.encodeHexString(result);
+        var kdf2 = hex.encode(kdf);
 
         //Apply TOTP algorithm
-        _counter = OTP.generateTOTPCodeString(
-            kdf, DateTime.now().millisecondsSinceEpoch);
+        _counter = totp(kdf2);
       }
     });
+  }
+
+  // Get Digit Power ex: getDigitPower(5) = 100_000 (1 and 5 zeros)
+  int getDigitPower(noDigits){
+    var result = 1;
+    for(var i=0; i < noDigits; i++) {
+      result = result * 10;
+    }
+    return result;
+  }
+
+  // Generate TOTP code 
+  String totp(kdf){
+    var noDigits = 6;
+
+    var time = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+    String step = (time ~/ 30).toString();
+
+    while(step.length < 16){
+      step = '0' + step;
+    }
+
+    var stepBytes = utf8.encode(step);
+    var hmacSha256 = new Hmac(sha256, utf8.encode(kdf));
+    var digest = hmacSha256.convert(stepBytes).bytes;
+
+    var offset = digest[digest.length - 1] & 0xf;
+
+    var binary = ((digest[offset] & 0x7f) << 24) | ((digest[offset + 1] & 0xff) << 16) | ((digest[offset + 2] & 0xff) << 8) | (digest[offset + 3] & 0xff);
+
+
+    var otp = binary % getDigitPower(noDigits);
+
+    String result = otp.toString();
+
+    while(result.length < noDigits){
+      result = '0' + result;
+    }
+    return result;
   }
 
   void _readQRcode() {
