@@ -52,25 +52,44 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _incrementCounter() {
-    setState(() {
-      if (_cameraScanResult != null) {
-        // Create PBKDF2 instance using the SHA256 hash. The default is to use SHA1
-        var gen = new PBKDF2(hash: sha256.newInstance());
+    if (_cameraScanResult != null) {
+      // Create PBKDF2 instance using the SHA256 hash. The default is to use SHA1
+      var gen = new PBKDF2(hash: sha256.newInstance());
 
-        // Generate a 32 byte key using the given password and salt, with 1000 iterations
-        var key = gen.generateKey(_cameraScanResult, "salt", 1000, 32);
+      // Generate a 32 byte key using the given password and salt, with 1000 iterations
+      var key = gen.generateKey(_cameraScanResult, "salt", 1000, 32);
 
-        //List<int> to HexString
-        var result = hex.encode(key);
+      //List<int> to HexString
+      var result = hex.encode(key);
 
-        //Encode hexstring to base32
-        var kdf = base32.encodeHexString(result);
+      //Encode hexstring to base32
+      var kdf = base32.encodeHexString(result);
 
-        //Apply TOTP algorithm
+      //Apply TOTP algorithm
+      setState(() {
         _counter = OTP.generateTOTPCodeString(
             kdf, DateTime.now().millisecondsSinceEpoch);
-      }
-    });
+      });
+    }
+    // setState(() {
+    //   if (_cameraScanResult != null) {
+    //     // Create PBKDF2 instance using the SHA256 hash. The default is to use SHA1
+    //     var gen = new PBKDF2(hash: sha256.newInstance());
+
+    //     // Generate a 32 byte key using the given password and salt, with 1000 iterations
+    //     var key = gen.generateKey(_cameraScanResult, "salt", 1000, 32);
+
+    //     //List<int> to HexString
+    //     var result = hex.encode(key);
+
+    //     //Encode hexstring to base32
+    //     var kdf = base32.encodeHexString(result);
+
+    //     //Apply TOTP algorithm
+    //     _counter = OTP.generateTOTPCodeString(
+    //         kdf, DateTime.now().millisecondsSinceEpoch);
+    //   }
+    // });
   }
 
   void _readQRcode() {
