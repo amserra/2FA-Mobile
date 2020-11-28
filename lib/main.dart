@@ -52,27 +52,44 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _incrementCounter() {
-    setState(() {
-      if (_cameraScanResult != null) {
+    if (_cameraScanResult != null) {
+      // Create PBKDF2 instance using the SHA256 hash. The default is to use SHA1
+      var gen = new PBKDF2(hash: sha256.newInstance());
 
-        // Create PBKDF2 instance using the SHA256 hash. The default is to use SHA1
-        var gen = new PBKDF2(hash: sha256.newInstance());
+      // Get secret param from qrcode uri
+      var uri = Uri.parse(_cameraScanResult);
+      var secret = uri.queryParameters['secret'];
 
-        // Get secret param from qrcode uri
-        var uri = Uri.parse(_cameraScanResult);
-        var secret = uri.queryParameters['secret'];
+      // Generate a 32 byte key using the given password and salt, with 1000 iterations
+      var key = gen.generateKey(secret, "salt", 1000, 32);
 
+      //List<int> to HexString
+      var kdf = hex.encode(key);
 
-        // Generate a 32 byte key using the given password and salt, with 1000 iterations
-        var kdf = gen.generateKey(secret, "salt", 1000, 32);
+      //Apply TOTP algorithm
+      setState(() {
+        _counter = totp(kdf);
+      });
+    }
+    // setState(() {
+    //   if (_cameraScanResult != null) {
+    //     // Create PBKDF2 instance using the SHA256 hash. The default is to use SHA1
+    //     var gen = new PBKDF2(hash: sha256.newInstance());
 
-        //List<int> to HexString
-        var kdf2 = hex.encode(kdf);
+    //     // Generate a 32 byte key using the given password and salt, with 1000 iterations
+    //     var key = gen.generateKey(_cameraScanResult, "salt", 1000, 32);
 
-        //Apply TOTP algorithm
-        _counter = totp(kdf2);
-      }
-    });
+    //     //List<int> to HexString
+    //     var result = hex.encode(key);
+
+    //     //Encode hexstring to base32
+    //     var kdf = base32.encodeHexString(result);
+
+    //     //Apply TOTP algorithm
+    //     _counter = OTP.generateTOTPCodeString(
+    //         kdf, DateTime.now().millisecondsSinceEpoch);
+    //   }
+    // });
   }
 
   // Get Digit Power ex: getDigitPower(5) = 100_000 (1 and 5 zeros)
