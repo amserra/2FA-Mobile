@@ -1,14 +1,16 @@
 import 'package:flutter/services.dart';
 import 'package:pbkdf2_dart/pbkdf2_dart.dart';
 import 'package:crypto/crypto.dart';
-import 'package:base32/base32.dart';
-import 'package:otp/otp.dart';
+// import 'package:base32/base32.dart';
+// import 'package:otp/otp.dart';
 import 'package:convert/convert.dart';
 import 'package:circular_countdown_timer/circular_countdown_timer.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
-// import 'crypto.dart';
+import 'crypto.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
 
 class MainScreen extends StatefulWidget {
   MainScreen({Key key, this.title}) : super(key: key);
@@ -21,35 +23,46 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   String _counter;
-  String _cameraScanResult;
+  String _secret;
   Timer timer;
+  final _storage = FlutterSecureStorage();
 
   @override
   void initState() {
     super.initState();
+    _readSecret();
     timer =
         Timer.periodic(Duration(seconds: 30), (Timer t) => _incrementCounter());
   }
 
+ Future<Null> _readSecret() async {
+    String _secretStorage = await _storage.read(key: 'secret');
+    setState(() {
+      return _secret = _secretStorage;
+    });
+  }
+
+  void _storeSecret() async {
+    await _storage.write(key: 'secret', value: _secret);
+    _readSecret();
+  }
+
+
   void _incrementCounter() {
-    if (_cameraScanResult != null) {
+    if (_secret != null) {
       // Create PBKDF2 instance using the SHA256 hash. The default is to use SHA1
       var gen = new PBKDF2(hash: sha256.newInstance());
 
       // Generate a 32 byte key using the given password and salt, with 1000 iterations
-      var key = gen.generateKey(_cameraScanResult, "salt", 1000, 32);
+      var key = gen.generateKey(_secret, "salt", 1000, 32);
 
       //List<int> to HexString
-      var result = hex.encode(key);
-
-      //Encode hexstring to base32
-      var kdf = base32.encodeHexString(result);
+      var kdf = hex.encode(key);
 
       //Apply TOTP algorithm
-      var totp = OTP.generateTOTPCodeString(
-          kdf, DateTime.now().millisecondsSinceEpoch);
+      var totpCode = totp(kdf);
       setState(() {
-        _counter = totp;
+        _counter = totpCode;
       });
     }
   }
@@ -68,7 +81,14 @@ class _MainScreenState extends State<MainScreen> {
     if (!mounted) return;
 
     setState(() {
-      _cameraScanResult = barcodeScanRes;
+      if(barcodeScanRes == null) {
+        _secret = null;
+      } else{
+        var uri = Uri.parse(barcodeScanRes);
+        _secret = uri.queryParameters['secret'];
+        _storeSecret();
+      }
+
     });
   }
 
@@ -127,7 +147,7 @@ class _MainScreenState extends State<MainScreen> {
   List<Widget> getCodeText() {
     List<Widget> widgetArray = List<Widget>();
 
-    if (_cameraScanResult == null) {
+    if (_secret == null) {
       widgetArray.add(Text(
         'You don\'t have a code',
         style: TextStyle(color: Colors.white, fontSize: 25),
