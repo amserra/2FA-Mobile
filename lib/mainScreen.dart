@@ -11,7 +11,6 @@ import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import 'crypto.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-
 class MainScreen extends StatefulWidget {
   MainScreen({Key key, this.title}) : super(key: key);
 
@@ -25,30 +24,39 @@ class _MainScreenState extends State<MainScreen> {
   String _counter;
   String _secret;
   Timer timer;
+  CountDownController _controller = CountDownController();
   final _storage = FlutterSecureStorage();
 
   @override
   void initState() {
     super.initState();
     _readSecret();
-    timer =
-        Timer.periodic(Duration(seconds: 30), (Timer t) => _incrementCounter());
+
+    // The first timer is to synchronize with the unix time. It waits whatever time, and
+    // then starts the recurrent periodic timer of 30s
+    // 500ms of offset, to ensure that a new code is generated every time
+    int offset = 500;
+    int countdownVal = timeToRegen();
+    generateOTP();
+    Timer(
+        Duration(seconds: countdownVal, milliseconds: 500),
+        () => Timer.periodic(Duration(seconds: 30, milliseconds: offset),
+            (Timer t) => generateOTP()));
   }
 
- Future<Null> _readSecret() async {
+  Future _readSecret() async {
     String _secretStorage = await _storage.read(key: 'secret');
     setState(() {
       return _secret = _secretStorage;
     });
   }
 
-  void _storeSecret() async {
+  void storeSecret() async {
     await _storage.write(key: 'secret', value: _secret);
     _readSecret();
   }
 
-
-  void _incrementCounter() {
+  void generateOTP() {
     if (_secret != null) {
       // Create PBKDF2 instance using the SHA256 hash. The default is to use SHA1
       var gen = new PBKDF2(hash: sha256.newInstance());
@@ -67,7 +75,7 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
-  Future<void> _readQRcode() async {
+  Future<void> readQRcode() async {
     String barcodeScanRes;
     // Platform messages may fail, so we use a try/catch PlatformException.
     try {
@@ -81,14 +89,13 @@ class _MainScreenState extends State<MainScreen> {
     if (!mounted) return;
 
     setState(() {
-      if(barcodeScanRes == null) {
+      if (barcodeScanRes == null) {
         _secret = null;
-      } else{
+      } else {
         var uri = Uri.parse(barcodeScanRes);
         _secret = uri.queryParameters['secret'];
-        _storeSecret();
+        storeSecret();
       }
-
     });
   }
 
@@ -106,9 +113,9 @@ class _MainScreenState extends State<MainScreen> {
         children: [
           SizedBox(height: 80),
           CircularCountDownTimer(
-            duration: 30,
+            duration: timeToRegen(),
             // Controller to control (i.e Pause, Resume, Restart) the Countdown
-            // controller: _controller,
+            controller: _controller,
             width: 80,
             height: 80,
             color: Colors.white,
@@ -125,7 +132,7 @@ class _MainScreenState extends State<MainScreen> {
             // Function which will execute when the Countdown Ends
             onComplete: () {
               // Here, do whatever you want
-              print('Countdown Ended');
+              _controller.restart(duration: 30);
             },
           ),
           SizedBox(height: 80),
@@ -135,7 +142,7 @@ class _MainScreenState extends State<MainScreen> {
         ],
       )),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _readQRcode,
+        onPressed: readQRcode,
         label: Text('Scan new QR code'),
         tooltip: 'Scan new QR code',
         icon: Icon(Icons.qr_code),

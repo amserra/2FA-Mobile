@@ -42,3 +42,10 @@ String totp(kdf) {
   }
   return result;
 }
+
+int timeToRegen() {
+  int time = DateTime.now().millisecondsSinceEpoch ~/ 1000; // to seconds
+  int step = (time % 30); // time
+  int timeToRegen = 30 - step; // to countdown
+  return timeToRegen;
+}
