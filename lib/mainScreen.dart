@@ -24,31 +24,35 @@ class _MainScreenState extends State<MainScreen> {
   String _counter;
   String _secret;
   Timer timer;
+  int firstValueTime = timeToRegen();
+  // 500ms of offset, to ensure that a new code is generated every time
+  int offset = 500;
   CountDownController _controller = CountDownController();
   final _storage = FlutterSecureStorage();
-
+  // Calling setState on an asynchronous event. But since it's asynchronous, the initState method has already finished
   @override
   void initState() {
     super.initState();
-    _readSecret();
 
-    // The first timer is to synchronize with the unix time. It waits whatever time, and
-    // then starts the recurrent periodic timer of 30s
-    // 500ms of offset, to ensure that a new code is generated every time
-    int offset = 500;
-    int countdownVal = timeToRegen();
-    generateOTP();
-    Timer(
-        Duration(seconds: countdownVal, milliseconds: 500),
-        () => Timer.periodic(Duration(seconds: 30, milliseconds: offset),
-            (Timer t) => generateOTP()));
+    _readSecret().then((value) {
+      setState(() {
+        return _secret = value;
+      });
+      // The first timer is to synchronize with the unix time. It waits whatever time, and
+      // then starts the recurrent periodic timer of 30s
+
+      // firstValueTime = timeToRegen();
+      generateOTP();
+      timer = Timer(
+          Duration(seconds: firstValueTime, microseconds: offset),
+          () => Timer.periodic(Duration(seconds: 30, milliseconds: offset),
+              (Timer t) => generateOTP()));
+    });
   }
 
-  Future _readSecret() async {
-    String _secretStorage = await _storage.read(key: 'secret');
-    setState(() {
-      return _secret = _secretStorage;
-    });
+  Future<String> _readSecret() async {
+    String secretStorage = await _storage.read(key: 'secret');
+    return secretStorage;
   }
 
   void storeSecret() async {
@@ -88,15 +92,25 @@ class _MainScreenState extends State<MainScreen> {
 
     if (!mounted) return;
 
-    setState(() {
-      if (barcodeScanRes == null) {
+    if (barcodeScanRes == null) {
+      setState(() {
         _secret = null;
-      } else {
-        var uri = Uri.parse(barcodeScanRes);
-        _secret = uri.queryParameters['secret'];
-        storeSecret();
-      }
-    });
+      });
+    } else {
+      var uri = Uri.parse(barcodeScanRes);
+      var newSecret = uri.queryParameters['secret'];
+      storeSecret();
+      int newFirstValueTime = timeToRegen();
+      setState(() {
+        _secret = newSecret;
+        firstValueTime = newFirstValueTime;
+      });
+      timer.cancel();
+      timer = Timer(
+          Duration(seconds: newFirstValueTime, milliseconds: offset),
+          () => Timer.periodic(Duration(seconds: 30, milliseconds: offset),
+              (Timer t) => generateOTP()));
+    }
   }
 
   @override
@@ -112,29 +126,31 @@ class _MainScreenState extends State<MainScreen> {
           child: Column(
         children: [
           SizedBox(height: 80),
-          CircularCountDownTimer(
-            duration: timeToRegen(),
-            // Controller to control (i.e Pause, Resume, Restart) the Countdown
-            controller: _controller,
-            width: 80,
-            height: 80,
-            color: Colors.white,
-            fillColor: Color.fromRGBO(154, 205, 50, 0.8),
-            backgroundColor: null,
-            strokeWidth: 4.0,
-            textStyle: TextStyle(
-                fontSize: 22.0,
-                color: Colors.white,
-                fontWeight: FontWeight.bold),
-            isReverse: true,
-            isReverseAnimation: true,
-            isTimerTextShown: true,
-            // Function which will execute when the Countdown Ends
-            onComplete: () {
-              // Here, do whatever you want
-              _controller.restart(duration: 30);
-            },
-          ),
+          _secret != null
+              ? CircularCountDownTimer(
+                  duration: firstValueTime,
+                  // Controller to control (i.e Pause, Resume, Restart) the Countdown
+                  controller: _controller,
+                  width: 80,
+                  height: 80,
+                  color: Colors.white,
+                  fillColor: Color.fromRGBO(154, 205, 50, 0.8),
+                  backgroundColor: null,
+                  strokeWidth: 4.0,
+                  textStyle: TextStyle(
+                      fontSize: 22.0,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold),
+                  isReverse: true,
+                  isReverseAnimation: true,
+                  isTimerTextShown: true,
+                  // Function which will execute when the Countdown Ends
+                  onComplete: () {
+                    // Here, do whatever you want
+                    _controller.restart(duration: 30);
+                  },
+                )
+              : SizedBox(height: 0),
           SizedBox(height: 80),
           Column(
               mainAxisAlignment: MainAxisAlignment.center,
