@@ -104,6 +104,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         setState(() {
                           passcodeEnabled = false;
                         });
+                        setPrefs(false, false);
                       }
                     }
                   }),
@@ -127,7 +128,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         setState(() {
                           biometricEnabled = false;
                         });
-                        // save in sharedprefs
+                        setPrefs(false, false);
                       }
                     }
                   })
