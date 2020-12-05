@@ -76,7 +76,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: Text('SecureAuth'),
             elevation: 20.0),
         body: Container(
-          padding: EdgeInsets.only(left: 20, top: 20),
+          padding: EdgeInsets.only(left: 20, top: 20, right: 20),
           child: Column(
             children: [
               Text("You can lock your app with: passcode, biometrics or none",
@@ -109,7 +109,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   }),
               SwitchListTile.adaptive(
                   title:
-                      Text("Biometric", style: TextStyle(color: Colors.white)),
+                      Text("Biometrics", style: TextStyle(color: Colors.white)),
                   value: biometricEnabled && supportsBiometric,
                   onChanged: (newValue) async {
                     if (newValue != biometricEnabled) {

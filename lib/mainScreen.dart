@@ -1,8 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:pbkdf2_dart/pbkdf2_dart.dart';
 import 'package:crypto/crypto.dart';
-// import 'package:base32/base32.dart';
-// import 'package:otp/otp.dart';
 import 'package:convert/convert.dart';
 import 'package:circular_countdown_timer/circular_countdown_timer.dart';
 import 'package:flutter/material.dart';
@@ -19,8 +17,8 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  String _counter;
-  String _secret;
+  String code;
+  String secretKey;
   Timer timer;
   int firstValueTime = timeToRegen();
   // 500ms of offset, to ensure that a new code is generated every time
@@ -32,39 +30,34 @@ class _MainScreenState extends State<MainScreen> {
   void initState() {
     super.initState();
 
-    _readSecret().then((value) {
+    readSecretKey().then((value) {
       setState(() {
-        return _secret = value;
+        secretKey = value;
       });
-      // The first timer is to synchronize with the unix time. It waits whatever time, and
-      // then starts the recurrent periodic timer of 30s
 
-      // firstValueTime = timeToRegen();
-      generateOTP();
-      timer = Timer(
-          Duration(seconds: firstValueTime, microseconds: offset),
-          () => Timer.periodic(Duration(seconds: 30, milliseconds: offset),
-              (Timer t) => generateOTP()));
+      timer = Timer.periodic(Duration(seconds: 1), (_) {
+        generateOTP();
+      });
     });
   }
 
-  Future<String> _readSecret() async {
-    String secretStorage = await _storage.read(key: 'secret');
+  Future<String> readSecretKey() async {
+    String secretStorage = await _storage.read(key: 'secretKey');
     return secretStorage;
   }
 
   void storeSecret() async {
-    await _storage.write(key: 'secret', value: _secret);
-    _readSecret();
+    await _storage.write(key: 'secretKey', value: secretKey);
+    // readSecretKey();
   }
 
   void generateOTP() {
-    if (_secret != null) {
+    if (secretKey != null) {
       // Create PBKDF2 instance using the SHA256 hash. The default is to use SHA1
       var gen = new PBKDF2(hash: sha256.newInstance());
 
       // Generate a 32 byte key using the given password and salt, with 1000 iterations
-      var key = gen.generateKey(_secret, "salt", 1000, 32);
+      var key = gen.generateKey(secretKey, "salt", 1000, 32);
 
       //List<int> to HexString
       var kdf = hex.encode(key);
@@ -72,7 +65,7 @@ class _MainScreenState extends State<MainScreen> {
       //Apply TOTP algorithm
       var totpCode = totp(kdf);
       setState(() {
-        _counter = totpCode;
+        code = totpCode;
       });
     }
   }
@@ -92,22 +85,21 @@ class _MainScreenState extends State<MainScreen> {
 
     if (barcodeScanRes == null) {
       setState(() {
-        _secret = null;
+        secretKey = null;
       });
     } else {
       var uri = Uri.parse(barcodeScanRes);
-      var newSecret = uri.queryParameters['secret'];
+      var newSecretKey = uri.queryParameters['secret'];
       storeSecret();
       int newFirstValueTime = timeToRegen();
       setState(() {
-        _secret = newSecret;
+        secretKey = newSecretKey;
         firstValueTime = newFirstValueTime;
       });
       timer.cancel();
-      timer = Timer(
-          Duration(seconds: newFirstValueTime, milliseconds: offset),
-          () => Timer.periodic(Duration(seconds: 30, milliseconds: offset),
-              (Timer t) => generateOTP()));
+      timer = Timer.periodic(Duration(seconds: 1), (_) {
+        generateOTP();
+      });
     }
   }
 
@@ -131,7 +123,7 @@ class _MainScreenState extends State<MainScreen> {
           child: Column(
         children: [
           SizedBox(height: 80),
-          _secret != null
+          secretKey != null
               ? CircularCountDownTimer(
                   duration: firstValueTime,
                   // Controller to control (i.e Pause, Resume, Restart) the Countdown
@@ -175,7 +167,7 @@ class _MainScreenState extends State<MainScreen> {
   List<Widget> getCodeText() {
     List<Widget> widgetArray = List<Widget>();
 
-    if (_secret == null) {
+    if (secretKey == null || code == null) {
       widgetArray.add(Text(
         'You don\'t have a code',
         style: TextStyle(color: Colors.white, fontSize: 25),
@@ -189,7 +181,7 @@ class _MainScreenState extends State<MainScreen> {
       );
       widgetArray.add(SizedBox(height: 50));
       widgetArray.add(Text(
-        '$_counter',
+        '$code',
         // style: Theme.of(context).textTheme.headline4,
         style: TextStyle(color: Colors.white, fontSize: 60),
       ));

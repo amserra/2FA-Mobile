@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:myapp/securityScreen.dart';
-import 'package:myapp/settingsScreen.dart';
+import 'package:secureAuth/securityScreen.dart';
+import 'package:secureAuth/settingsScreen.dart';
 import 'mainScreen.dart';
 
 void main() {
