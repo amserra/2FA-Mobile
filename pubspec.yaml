@@ -1,4 +1,4 @@
-name: secureAuth
+name: myapp
 description: An app for 2FA
 
 # The following line prevents the package from being accidentally published to
@@ -23,7 +23,7 @@ dependencies:
   passcode_screen: ^1.2.2+1
   shared_preferences: ^0.5.12+4
   local_auth: ^0.6.3+4
-  flutter_launcher_icons: ^0.8.1
+  # flutter_launcher_icons: ^0.8.1
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -33,10 +33,10 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
-flutter_icons:
-  image_path: "assets/logo.png"
-  android: true
-  ios: true
+# flutter_icons:
+#   image_path: "assets/logo.png"
+#   android: true
+#   ios: true
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
