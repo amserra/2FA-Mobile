@@ -46,9 +46,8 @@ class _MainScreenState extends State<MainScreen> {
     return secretStorage;
   }
 
-  void storeSecret() async {
-    await _storage.write(key: 'secretKey', value: secretKey);
-    // readSecretKey();
+  Future<void> storeSecret(String newSecretKey) async {
+    await _storage.write(key: 'secretKey', value: newSecretKey);
   }
 
   void generateOTP() {
@@ -90,7 +89,7 @@ class _MainScreenState extends State<MainScreen> {
     } else {
       var uri = Uri.parse(barcodeScanRes);
       var newSecretKey = uri.queryParameters['secret'];
-      storeSecret();
+      await storeSecret(newSecretKey);
       int newFirstValueTime = timeToRegen();
       setState(() {
         secretKey = newSecretKey;
