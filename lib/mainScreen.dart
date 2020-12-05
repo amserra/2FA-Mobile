@@ -12,9 +12,7 @@ import 'crypto.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class MainScreen extends StatefulWidget {
-  MainScreen({Key key, this.title}) : super(key: key);
-
-  final String title;
+  MainScreen({Key key}) : super(key: key);
 
   @override
   _MainScreenState createState() => _MainScreenState();
@@ -119,8 +117,15 @@ class _MainScreenState extends State<MainScreen> {
       backgroundColor: Color.fromRGBO(30, 30, 30, 1),
       appBar: AppBar(
         backgroundColor: Color.fromRGBO(36, 36, 36, 1),
-        title: Text(widget.title),
+        title: Text('SecureAuth'),
         elevation: 20.0,
+        actions: [
+          Padding(
+              padding: EdgeInsets.only(right: 20),
+              child: GestureDetector(
+                  onTap: () => Navigator.pushNamed(context, '/settings'),
+                  child: Icon(Icons.settings)))
+        ],
       ),
       body: Center(
           child: Column(
