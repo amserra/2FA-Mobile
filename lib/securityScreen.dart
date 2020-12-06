@@ -31,18 +31,10 @@ class _SecurityScreenState extends State<SecurityScreen> {
   }
 
   Future<void> loadSettings() async {
-    print("Hello!");
     await hasPasscode().then((hasPasscode) => {
           if (hasPasscode)
             setState(() {
               authType = "passcode";
-            })
-        });
-
-    await hasBiometric().then((hasBiometric) => {
-          if (hasBiometric)
-            setState(() {
-              authType = "biometric";
             })
         });
 
@@ -53,13 +45,13 @@ class _SecurityScreenState extends State<SecurityScreen> {
                 passcode = value;
               })
             }
-          else
-            {
-              // If this happens there's an error
-              setState(() {
-                authType = 'none';
-              })
-            }
+        });
+
+    await hasBiometric().then((hasBiometric) => {
+          if (hasBiometric)
+            setState(() {
+              authType = "biometric";
+            })
         });
   }
 
