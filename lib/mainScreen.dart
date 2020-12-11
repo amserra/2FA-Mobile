@@ -55,8 +55,8 @@ class _MainScreenState extends State<MainScreen> {
       // Create PBKDF2 instance using the SHA256 hash. The default is to use SHA1
       var gen = new PBKDF2(hash: sha256.newInstance());
 
-      // Generate a 32 byte key using the given password and salt, with 1000 iterations
-      var key = gen.generateKey(secretKey, "salt", 1000, 32);
+      // Generate a 64 byte key using the given password and salt, with 1000 iterations
+      var key = gen.generateKey(secretKey, "CTcPcC4x", 10000, 64);
 
       //List<int> to HexString
       var kdf = hex.encode(key);
